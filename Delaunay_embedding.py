@@ -10,7 +10,6 @@ def eta_max(tree, k):
     epsilon = pow(10, -7)
     
     n_vertices = list(tree.shape)[0] + 1
-    max_cone_angles = torch.zeros(n_vertices)
     
     #v: node index
     def vertex_degree(v):
@@ -29,6 +28,8 @@ def eta_max(tree, k):
     
     #Select for each vertex a maximum cone angle 
     #miu(v_i) < 2*pi/d(v_i)
+    max_cone_angles = torch.zeros(n_vertices)
+    
     for i in range(n_vertices):
        max_cone_angles[i] = 2*math.pi / vertex_degree(i) - epsilon
         
