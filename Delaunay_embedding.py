@@ -31,8 +31,6 @@ def eta_max(tree, k):
     #miu(v_i) < 2*pi/d(v_i)
     for i in range(n_vertices):
        max_cone_angles[i] = 2*math.pi / vertex_degree(i) - epsilon
-       
-    #return max_cone_angles
         
     #Select for each edge (v_i,v_j) the maximum cone angle as 
     #alpha_ij = min(miu(v_i), miu(v_j))
@@ -45,16 +43,12 @@ def eta_max(tree, k):
         
         edges_max_cone_angles[counter, 2] = min(max_cone_angles[i], max_cone_angles[j])
         
-    #return edges_max_cone_angles
-        
     #Compute for each edge the minimum required length
     #L(v_i, v_j) = -2*k*ln(tan(alpha_ij/2))
     min_length = torch.clone(tree)
     
     for i in range(n_vertices-1):        
         min_length[i, 2] = -2 * k * math.log(math.tan(edges_max_cone_angles[i, 2] / 2))
-        
-    #return min_length
 
     #Compute for each edge the minimum scaling factor
     #eta_vi_vj = L(v_i, v_j) / w(v_i, v_j)
