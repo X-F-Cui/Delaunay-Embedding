@@ -5,68 +5,101 @@ import math
 #tree is represented as edges and weights in the form [[v_i, v_j, w(v_i, v_j)], ...]
 tree = torch.tensor([[0,1,6.0], [1,2,9.0], [1,3,10.0], [0,4,8.0], [4,5,7.0]])
 
-def eta_max(tree, k):
+def embedding(tree, k, epsilon):
     
-    epsilon = pow(10, -7)
-    
+    eps = pow(10, -10)
     n_vertices = list(tree.shape)[0] + 1
     
     #v: node index
-    def vertex_degree(v):
-    
-        degree = 0  
+    def child_node(v):  
+        
+        child_node = []
         
         for i in range(n_vertices-1):
             
-            if (tree[i][0].item() == v):              
-                degree += 1
-                
-            if (tree[i][1].item() == v):               
-                degree += 1
+            if tree[i][0].item() == v:              
+                child_node.append(tree[i][1].item())
         
-        return degree
+        return child_node
     
-    #Select for each vertex a maximum cone angle 
-    #miu(v_i) < 2*pi/d(v_i)
-    max_cone_angles = torch.zeros(n_vertices)
+    degrees = torch.zeros(n_vertices)
+    #a list of lists of child nodes for each vertex
+    child_nodes = []
     
     for i in range(n_vertices):
-       max_cone_angles[i] = 2*math.pi / vertex_degree(i) - epsilon
         
-    #Select for each edge (v_i,v_j) the maximum cone angle as 
-    #alpha_ij = min(miu(v_i), miu(v_j))
-    edges_max_cone_angles = torch.clone(tree)
+        child_nodes.append(child_node(i))
+        
+        if i == 0:
+            #root node doesn't have parent node
+            degrees[i] = len(child_nodes[i])
+        else:
+            degrees[i] = len(child_nodes[i]) + 1
+        
+    #d: max degree of any node
+    max_degree = torch.max(degrees).item()
     
-    for counter in range(n_vertices-1):
-        
-        i = int(tree[counter][0].item())
-        j = int(tree[counter][1].item())
-        
-        edges_max_cone_angles[counter, 2] = min(max_cone_angles[i], max_cone_angles[j])
-        
+    #cone separation angle beta < pi / d
+    beta = eps
+    
+    #angle for cones 
+    #alpha = 2*pi/d - 2*beta
+    alpha = 2*math.pi / max_degree - 2*beta
+    
+    nu = -2 * k * math.log(math.tan(beta/2))
+    
     #Compute for each edge the minimum required length
-    #L(v_i, v_j) = -2*k*ln(tan(alpha_ij/2))
-    min_length = torch.clone(tree)
+    #L(v_i, v_j) = -2*k*ln(tan(alpha/2))
+    min_lengths = torch.clone(tree)
+    
+    min_length = -2 * k * math.log(math.tan(alpha / 2))
     
     for i in range(n_vertices-1):        
-        min_length[i, 2] = -2 * k * math.log(math.tan(edges_max_cone_angles[i, 2] / 2))
+        min_lengths[i, 2] = min_length
 
     #Compute for each edge the minimum scaling factor
     #eta_vi_vj = L(v_i, v_j) / w(v_i, v_j)
     min_scaling_factor = torch.clone(tree)
     
     for i in range(n_vertices-1):
-        min_scaling_factor[i, 2] = min_length[i, 2]/ tree[i, 2]
+        min_scaling_factor[i, 2] = min_lengths[i, 2]/ tree[i, 2]
         
     #Compute the max value of eta over all edges
     etas = min_scaling_factor[:, 2]
-    max_eta = torch.max(etas).item()
+    eta_max = torch.max(etas).item()
     
-    return max_eta
-
-
-
-print (eta_max(tree, -1))
+    #Select tau > eta_max such that all edges are longer than nu*(1+epsilon)/epsilon
+    #min weight of all edges
+    min_weight = torch.min(tree[:, 2]).item()
+    tau = nu / min_weight * (1+epsilon)/ epsilon +eps
+    
+    #if tau <= eta_max, set tau > eta_max
+    if tau <= eta_max:
+        tau = eta_max + eps
+        
+    #return tau
+        
+    #embed edges
+    coordinates = torch.zeros(n_vertices+1, 2)
+    
+    #v: vertex number
+    #z: coordinates in hyperbolic space represented as complex number x+yi
+    
+    def embed_vertex(v, z):
+        
+        if len(child_nodes[v]) != 0:
+            
+            #for the ith child in the child nodes of v
+            for i in range(len(child_nodes[v])): 
+                
+                #find the weight of embedded edge
+                for j in range(n_vertices-1):                  
+                    if (tree[j][0].item() == v) and (tree[j][1].item() == child_nodes[v][i]):
+                        weight = tree[j][2].item()
+                #embedded length
+                r = tau * weight
+                #cone angle
+                theta = alpha * i
        
        
        
