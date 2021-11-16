@@ -151,10 +151,13 @@ def hyp_embedding (tree, k, epsilon, is_weighted):
     return coords
 
 def visualize (tree, embeddings):
-    x_coords = embeddings[:, 0]
-    y_coords = embeddings[:, 1]
+    for i in range(tree.number_of_nodes()):
+        x_coord = embeddings[i, 0]
+        y_coord = embeddings[i, 1]
+        plt.scatter(x_coord, y_coord, label = str(i))
+        
+    plt.legend()
     
-    plt.scatter(x_coords, y_coords)
     return embeddings
 
 print(visualize(tree, hyp_embedding(tree, 1, 0.05, True)))
