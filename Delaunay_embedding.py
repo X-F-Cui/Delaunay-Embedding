@@ -51,7 +51,7 @@ def compute_tau (tree, k, epsilon, is_weighted):
         
     return tau
 
-def map_to_zero (mu, x):
+def hyp_isometry (mu, x):
     mp.dps = 50
     
     z0 = mu[0] + mu[1]*j
@@ -65,7 +65,7 @@ def add_children (p, x, edge_lengths):
     mp.dps = 50
     
     #map x to (0, 0)
-    p0 = map_to_zero(x, p)
+    p0 = hyp_isometry(x, p)
     c = len(edge_lengths)
     q = norm(p0)
     p_angle = acos(fdiv(p0[0], q))
@@ -83,12 +83,12 @@ def add_children (p, x, edge_lengths):
         points0[k, 1] = fmul(edge_lengths[k], sin(angle))
         
         #reflect all neighboring nodes by mapping x back to its actual coordinates
-        points0[k, :] = map_to_zero(x, points0[k, :])
+        points0[k, :] = hyp_isometry(x, points0[k, :])
      
     return points0
     
 # Express a hyperbolic distance in the unit disk
-def hyp_to_euc_dist(x):
+def euc_to_hyp_dist(x):
     mp.dps = 50
     
     return sqrt(fdiv(fsub(cosh(x), 1), fadd(cosh(x), 1)))
@@ -104,14 +104,14 @@ def hyp_embedding (tree, k, epsilon, is_weighted):
     tau = compute_tau(tree, k, epsilon, is_weighted)
     
     #lengths of unweighted edges
-    edge_lengths = list(map(hyp_to_euc_dist, ones(d, 1) * tau))
+    edge_lengths = list(map(euc_to_hyp_dist, ones(d, 1) * tau))
        
     #lengths of weighted edges
     if is_weighted:
         k = 0
         for child in root_children:
             weight = tree[0][child]['weight']
-            edge_lengths[k] = hyp_to_euc_dist(fmul(tau, weight))
+            edge_lengths[k] = euc_to_hyp_dist(fmul(tau, weight))
             k += 1
     # queue containing the nodes whose children we're placing
     q = []
@@ -123,11 +123,9 @@ def hyp_embedding (tree, k, epsilon, is_weighted):
                         
         q.append(root_children[i])
     
-    node_idx = 0
     while len(q) > 0:
         #pop the node whose children we're placing off the queue
         h = q.pop(0)
-        node_idx += 1
         
         children = list(tree.successors(h))
         parent = list(tree.predecessors(h))[0]
@@ -137,14 +135,14 @@ def hyp_embedding (tree, k, epsilon, is_weighted):
             q.append(child)
         
         #lengths of unweighted edges
-        edge_lengths = list(map(hyp_to_euc_dist, ones(d, 1) * tau))
+        edge_lengths = list(map(euc_to_hyp_dist, ones(d, 1) * tau))
         
         #lengths of weighted edges
         if is_weighted:
             k = 0
             for child in children:
                 weight = tree[h][child]['weight']
-                edge_lengths[k] = hyp_to_euc_dist(fmul(tau, weight))
+                edge_lengths[k] = euc_to_hyp_dist(fmul(tau, weight))
                 k += 1
     
         if num_children > 0:
