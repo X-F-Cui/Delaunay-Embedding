@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 
 tree = nx.DiGraph()
 tree.add_edges_from([(0, 1, {'weight': 10}), (1, 2, {'weight': 21}), 
-                    (2, 3, {'weight': 31}), (0, 4, {'weight': 40}),
-                    (4, 5, {'weight': 54})])
+                    (1, 3, {'weight': 31}), (0, 4, {'weight': 40}),
+                    (4, 5, {'weight': 54}), (4, 6, {'weight': 40})])
 
 #tree.add_edges_from([(0, 1, {'weight': 10}), (0, 2, {'weight': 21}), 
                  #    (0, 3, {'weight': 31}), (0, 4, {'weight': 40}),
@@ -54,13 +54,17 @@ def compute_tau (tree, k, epsilon, is_weighted):
 def map_to_zero (mu, x):
     mp.dps = 50
     
-    a = mu / power(norm(mu), 2)
-    r2 = fsub(power(norm(a), 2), 1)
-    return (x - a) * fdiv(r2, power(norm(x-a), 2)) + a
-
+    z0 = mu[0] + mu[1]*j
+    z = x[0] + x[1]*j
+    result = fdiv(fsub(z0, z), fsub(1, fmul(conj(z0), z)))  #transformation function
+    x[0] = re(result)
+    x[1] = im(result)
+    return x 
+    
 def add_children (p, x, edge_lengths):
     mp.dps = 50
     
+    #map x to (0, 0)
     p0 = map_to_zero(x, p)
     c = len(edge_lengths)
     q = norm(p0)
@@ -78,7 +82,7 @@ def add_children (p, x, edge_lengths):
         points0[k, 0] = fmul(edge_lengths[k], cos(angle))
         points0[k, 1] = fmul(edge_lengths[k], sin(angle))
         
-        #reflect all neighboring nodes by mapping x to (0, 0)
+        #reflect all neighboring nodes by mapping x back to its actual coordinates
         points0[k, :] = map_to_zero(x, points0[k, :])
      
     return points0
@@ -150,15 +154,25 @@ def hyp_embedding (tree, k, epsilon, is_weighted):
                 
     return coords
 
+def draw_edges (tree, x, embeddings):
+    children = list(tree.successors(x))
+    for child in children:
+        x_values = [embeddings[x, 0], embeddings[child, 0]]
+        y_values = [embeddings[x, 1], embeddings[child, 1]]
+        plt.plot(x_values, y_values)
+
 def visualize (tree, embeddings):
     for i in range(tree.number_of_nodes()):
         x_coord = embeddings[i, 0]
         y_coord = embeddings[i, 1]
         plt.scatter(x_coord, y_coord, label = str(i))
+        #draw edges in the tree
+        draw_edges(tree, i, embeddings)
         
     plt.legend()
-    
+     
     return embeddings
 
-print(visualize(tree, hyp_embedding(tree, 1, 0.05, True)))
+print(visualize(tree, hyp_embedding(tree, 1, 0.5, False)))
+
 
